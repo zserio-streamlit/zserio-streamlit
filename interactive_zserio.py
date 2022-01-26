@@ -100,7 +100,7 @@ if uploaded_schema:
     schema = uploaded_schema.getvalue().decode("utf8")
     uploaded_schema.close()
 else:
-    with open("sample/sample.zs", "r") as sample:
+    with open("sample_src/sample.zs", "r") as sample:
         st.session_state.sample_mode = True
         schema = sample.read()
 
@@ -137,10 +137,12 @@ if len(checked_langs):
 python_code_check = st.checkbox("Experimental python code", help="Python generator must be enabled", value=True)
 
 if python_code_check and "python" in checked_langs:
-    sys.path.append(os.path.join(gen_dir, "python"))
+    gen_path = os.path.join(gen_dir, "python")
+    if sys.path[-1] != gen_path:
+        sys.path.append(gen_path)
 
     if not uploaded_schema:
-        with open("sample/sample.py", "r") as sample:
+        with open("sample_src/sample.py", "r") as sample:
             code = sample.read()
     else:
         code = None
