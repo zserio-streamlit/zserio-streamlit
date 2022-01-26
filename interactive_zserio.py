@@ -1,8 +1,10 @@
 import os
 import re
+import io
 import shutil
-from glob import glob
 import streamlit as st
+from glob import glob
+from zipfile import ZipFile
 
 import zserio
 
@@ -39,6 +41,17 @@ def compile(zs, gen_dir, langs, extra_args):
 
     return True
 
+def map_highlighting(lang):
+    if lang == "doc":
+        return "html"
+    if lang == "cpp":
+        # see: https://discuss.streamlit.io/t/c-markdown-syntax-highlighting-doesnt-work/14106/2
+        # streamlit seems to have problems with c++ / cpp / cxx
+        return "c"
+    if lang == "java":
+        return "javax"
+    return lang
+
 def display_sources(gen_dir, lang):
     st.caption(lang)
     generated = glob(gen_dir + "/" + lang + "/**", recursive=True)
@@ -46,7 +59,24 @@ def display_sources(gen_dir, lang):
         if os.path.isfile(gen):
             with open(gen, "r") as source:
                 with st.expander(gen):
-                    st.code(source.read(), lang if lang != "doc" else "html")
+                    st.code(source.read(), map_highlighting(lang))
+
+def add_download(gen_dir):
+    zip_filename = "gen.zip"
+    zip_path = os.path.join(gen_dir, zip_filename)
+    if os.path.exists(zip_path):
+        os.remove(zip_path)
+
+    files_to_zip = []
+    for root, dirs, files in os.walk(gen_dir):
+        for f in files:
+            files_to_zip.append(os.path.join(root, f))
+    with ZipFile(zip_path, "w") as zip_file:
+        for f in files_to_zip:
+            zip_file.write(f)
+
+    with open(zip_path, "rb") as zip_file:
+        st.download_button("Download sources", zip_file, mime="application/zip")
 
 st.write("""
 # Interactive Zserio Compiler!
@@ -90,3 +120,4 @@ if len(checked_langs):
     for i, lang in enumerate(checked_langs):
         with cols[i]:
             display_sources(gen_dir, lang)
+    add_download(gen_dir)
