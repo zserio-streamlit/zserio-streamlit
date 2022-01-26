@@ -1,10 +1,15 @@
 import os
+import sys
 import re
 import io
 import shutil
 import streamlit as st
 from glob import glob
 from zipfile import ZipFile
+
+# needed for python code
+from io import StringIO
+from contextlib import redirect_stdout
 
 import zserio
 
@@ -40,6 +45,12 @@ def compile(zs, gen_dir, langs, extra_args):
         return False
 
     return True
+
+def recompile(zs, gen_dir, check_langs, extra_args):
+    shutil.rmtree(gen_dir, ignore_errors=True)
+    with st.spinner("Compiling..."):
+        if not compile(zs, gen_dir, checked_langs, extra_args):
+            st.stop()
 
 def map_highlighting(lang):
     if lang == "doc":
@@ -82,16 +93,20 @@ st.write("""
 # Interactive Zserio Compiler!
 """)
 
+st.session_state.sample_mode = False
+
 uploaded_schema = st.file_uploader("Upload schema", type="zs")
 if uploaded_schema:
     schema = uploaded_schema.getvalue().decode("utf8")
     uploaded_schema.close()
 else:
     with open("sample/sample.zs", "r") as sample:
+        st.session_state.sample_mode = True
         schema = sample.read()
+
 zs = st.text_area("Zserio Schema", value=schema, height=150)
 
-extra_args = st.text_input("Extra Arguments:").split()
+extra_args = st.text_input("Extra Arguments").split()
 
 langs = (
     "python", "cpp", "java", "xml", "doc"
@@ -102,7 +117,7 @@ langs_cols = st.columns(len(langs))
 langs_checks = []
 for i, lang in enumerate(langs):
     with langs_cols[i]:
-        langs_checks.append(st.checkbox(lang))
+        langs_checks.append(st.checkbox(lang, value=(lang == "python")))
 
 checked_langs = []
 for i, checked in enumerate(langs_checks):
@@ -110,10 +125,7 @@ for i, checked in enumerate(langs_checks):
         checked_langs.append(langs[i])
 
 gen_dir = "gen"
-shutil.rmtree(gen_dir, ignore_errors=True)
-with st.spinner("Compiling..."):
-    if not compile(zs, gen_dir, checked_langs, extra_args):
-        st.stop()
+recompile(zs, gen_dir, checked_langs, extra_args)
 
 if len(checked_langs):
     cols = st.columns(len(checked_langs))
@@ -121,3 +133,23 @@ if len(checked_langs):
         with cols[i]:
             display_sources(gen_dir, lang)
     add_download(gen_dir)
+
+python_code_check = st.checkbox("Experimental python code", help="Python generator must be enabled", value=True)
+
+if python_code_check and "python" in checked_langs:
+    sys.path.append(os.path.join(gen_dir, "python"))
+
+    if not uploaded_schema:
+        with open("sample/sample.py", "r") as sample:
+            code = sample.read()
+    else:
+        code = None
+
+    py = st.text_area("Python code", value=code, height=250)
+
+    out = StringIO()
+    with redirect_stdout(out):
+        exec(py)
+
+    st.caption("Python output")
+    st.text(out.getvalue())
