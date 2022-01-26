@@ -6,36 +6,29 @@ import streamlit as st
 
 import zserio
 
-gen_dir = "gen"
-st.set_page_config(layout="wide", page_title="Interactive Zserio")
+st.set_page_config(layout="wide", page_title="Interactive Zserio", page_icon="./img/zs.png")
 
-def checked_langs(languages, languages_checks):
-    langs = []
-    for i, lang in enumerate(languages):
-        pass
-
-def get_package(zs):
+def get_package_names(zs):
     m = re.search("package (.*);", zs)
     if m:
-        return m.group(1)
-    return None
+        return m.group(1).split(".")
+    return ["default"]
 
-def compile(zs, langs, extra_args):
-    pkg = get_package(zs)
-    if not pkg:
-        st.error("Cannot parse package name!")
+def compile(zs, gen_dir, langs, extra_args):
+    if not len(zs):
         return False
-    zs_name = pkg + ".zs"
-    if not os.path.exists(gen_dir):
-        os.mkdir(gen_dir)
-    zs_filename = os.path.join(gen_dir, zs_name)
-    with open(zs_filename, "w") as zs_file:
+
+    package_names = get_package_names(zs)
+    zs_path = os.path.join(gen_dir, "zs")
+    zs_file_path = os.path.join(*package_names[0:-1], package_names[-1] + ".zs")
+    os.makedirs(os.path.join(zs_path, *package_names[0:-1]))
+    with open(os.path.join(zs_path, zs_file_path), "w") as zs_file:
         zs_file.write(zs)
 
     args=[]
     args+=extra_args
-    args+=["-src", gen_dir]
-    args.append(zs_name)
+    args+=["-src", zs_path]
+    args.append(zs_file_path)
     for lang in langs:
         args+=["-" + lang, os.path.join(gen_dir, lang)]
 
@@ -46,7 +39,7 @@ def compile(zs, langs, extra_args):
 
     return True
 
-def display_sources(lang):
+def display_sources(gen_dir, lang):
     st.caption(lang)
     generated = glob(gen_dir + "/" + lang + "/**", recursive=True)
     for gen in generated:
@@ -59,7 +52,15 @@ st.write("""
 # Interactive Zserio Compiler!
 """)
 
-zs = st.text_area("Zserio Schema")
+uploaded_schema = st.file_uploader("Upload schema", type="zs")
+if uploaded_schema:
+    schema = uploaded_schema.getvalue().decode("utf8")
+    uploaded_schema.close()
+else:
+    with open("sample/sample.zs", "r") as sample:
+        schema = sample.read()
+zs = st.text_area("Zserio Schema", value=schema, height=150)
+
 extra_args = st.text_input("Extra Arguments:").split()
 
 langs = (
@@ -78,14 +79,14 @@ for i, checked in enumerate(langs_checks):
     if checked:
         checked_langs.append(langs[i])
 
+gen_dir = "gen"
 shutil.rmtree(gen_dir, ignore_errors=True)
-
 with st.spinner("Compiling..."):
-    if not compile(zs, checked_langs, extra_args):
+    if not compile(zs, gen_dir, checked_langs, extra_args):
         st.stop()
 
-cols = st.columns(len(checked_langs))
-for i, checked in enumerate(langs_checks):
-    if checked:
+if len(checked_langs):
+    cols = st.columns(len(checked_langs))
+    for i, lang in enumerate(checked_langs):
         with cols[i]:
-            display_sources(langs[i])
+            display_sources(gen_dir, lang)
