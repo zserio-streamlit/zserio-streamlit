@@ -9,7 +9,7 @@ from zipfile import ZipFile
 
 # needed for python code
 from io import StringIO
-from contextlib import redirect_stdout
+from contextlib import redirect_stdout, redirect_stderr
 
 import zserio
 
@@ -46,11 +46,21 @@ def compile(zs, gen_dir, langs, extra_args):
 
     return True
 
-def recompile(zs, gen_dir, check_langs, extra_args):
-    shutil.rmtree(gen_dir, ignore_errors=True)
-    with st.spinner("Compiling..."):
-        if not compile(zs, gen_dir, checked_langs, extra_args):
-            st.stop()
+def recompile_params_changed(zs, checked_langs, extra_args):
+    recompile_params = (zs, checked_langs, extra_args)
+    if not "recompile_params" in st.session_state or st.session_state.recompile_params != recompile_params:
+        st.session_state.recompile_params = recompile_params
+        return True
+    return False
+
+def recompile(zs, gen_dir, checked_langs, extra_args):
+    if recompile_params_changed(zs, checked_langs, extra_args):
+        shutil.rmtree(gen_dir, ignore_errors=True)
+        with st.spinner("Compiling..."):
+            if not compile(zs, gen_dir, checked_langs, extra_args):
+                st.stop()
+    else:
+        st.info("No recompilation needed...")
 
 def map_highlighting(lang):
     if lang == "doc":
@@ -59,8 +69,6 @@ def map_highlighting(lang):
         # see: https://discuss.streamlit.io/t/c-markdown-syntax-highlighting-doesnt-work/14106/2
         # streamlit seems to have problems with c++ / cpp / cxx
         return "c"
-    if lang == "java":
-        return "javax"
     return lang
 
 def display_sources(gen_dir, lang):
@@ -97,6 +105,7 @@ st.session_state.sample_mode = False
 
 uploaded_schema = st.file_uploader("Upload schema", type="zs")
 if uploaded_schema:
+    st.session_state.sample_mode = False
     schema = uploaded_schema.getvalue().decode("utf8")
     uploaded_schema.close()
 else:
@@ -137,21 +146,31 @@ if len(checked_langs):
 python_code_check = st.checkbox("Experimental python code", help="Python generator must be enabled", value=True)
 
 if python_code_check and "python" in checked_langs:
+    sys.dont_write_bytecode = True
     gen_path = os.path.join(gen_dir, "python")
     if sys.path[-1] != gen_path:
         sys.path.append(gen_path)
 
-    if not uploaded_schema:
+    modules_keys = set(sys.modules.keys())
+
+    if st.session_state.sample_mode:
         with open("sample_src/sample.py", "r") as sample:
-            code = sample.read()
+            py_code = sample.read()
     else:
-        code = None
+        py_code = ""
 
-    py = st.text_area("Python code", value=code, height=250)
+    py_code = st.text_area("Python code", value=py_code, height=250)
 
-    out = StringIO()
-    with redirect_stdout(out):
-        exec(py)
+    with StringIO() as out, redirect_stdout(out):
+        st.caption("Python output")
+        try:
+            exec(py_code)
+            st.text(out.getvalue())
+        except Exception as e:
+            st.error(e)
 
-    st.caption("Python output")
-    st.text(out.getvalue())
+    # allow to reload modules imported by the python code
+    new_modules_keys = set(sys.modules.keys())
+    modules_to_remove = new_modules_keys - modules_keys
+    for module_to_remove in modules_to_remove:
+        sys.modules.pop(module_to_remove)
