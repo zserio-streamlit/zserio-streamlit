@@ -46,6 +46,19 @@ def compile(zs, gen_dir, langs, extra_args):
 
     return True
 
+def compress(gen_dir, zip_filename):
+    zip_path = os.path.join(gen_dir, zip_filename)
+    if os.path.exists(zip_path):
+        os.remove(zip_path)
+
+    files_to_zip = []
+    for root, dirs, files in os.walk(gen_dir):
+        for f in files:
+            files_to_zip.append(os.path.join(root, f))
+    with ZipFile(zip_path, "w") as zip_file:
+        for f in files_to_zip:
+            zip_file.write(f)
+
 def recompile_params_changed(zs, checked_langs, extra_args):
     recompile_params = (zs, checked_langs, extra_args)
     if not "recompile_params" in st.session_state or st.session_state.recompile_params != recompile_params:
@@ -59,8 +72,10 @@ def recompile(zs, gen_dir, checked_langs, extra_args):
         with st.spinner("Compiling..."):
             if not compile(zs, gen_dir, checked_langs, extra_args):
                 st.stop()
+        return True
     else:
         st.info("No recompilation needed...")
+        return False
 
 def map_highlighting(lang):
     if lang == "doc":
@@ -80,20 +95,7 @@ def display_sources(gen_dir, lang):
                 with st.expander(gen):
                     st.code(source.read(), map_highlighting(lang))
 
-def add_download(gen_dir):
-    zip_filename = "gen.zip"
-    zip_path = os.path.join(gen_dir, zip_filename)
-    if os.path.exists(zip_path):
-        os.remove(zip_path)
-
-    files_to_zip = []
-    for root, dirs, files in os.walk(gen_dir):
-        for f in files:
-            files_to_zip.append(os.path.join(root, f))
-    with ZipFile(zip_path, "w") as zip_file:
-        for f in files_to_zip:
-            zip_file.write(f)
-
+def add_zip_download(zip_path):
     with open(zip_path, "rb") as zip_file:
         st.download_button("Download sources", zip_file, mime="application/zip")
 
@@ -134,14 +136,16 @@ for i, checked in enumerate(langs_checks):
         checked_langs.append(langs[i])
 
 gen_dir = "gen"
-recompile(zs, gen_dir, checked_langs, extra_args)
+zip_filename = "gen.zip"
+if recompile(zs, gen_dir, checked_langs, extra_args):
+    compress(gen_dir, zip_filename)
 
 if len(checked_langs):
     cols = st.columns(len(checked_langs))
     for i, lang in enumerate(checked_langs):
         with cols[i]:
             display_sources(gen_dir, lang)
-    add_download(gen_dir)
+    add_zip_download(os.path.join(gen_dir, zip_filename))
 
 python_code_check = st.checkbox("Experimental python code", help="Python generator must be enabled", value=True)
 
