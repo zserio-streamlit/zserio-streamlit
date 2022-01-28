@@ -154,12 +154,16 @@ if python_code_check and "python" in checked_langs:
     modules_keys = set(sys.modules.keys())
 
     if st.session_state.sample_mode:
-        with open("sample_src/sample.py", "r") as sample:
-            py_code = sample.read()
+        if not "py_sample_code" in st.session_state:
+            with open("sample_src/sample.py", "r") as sample:
+                st.session_state.py_sample_code = sample.read()
+        py_code = st.session_state.py_sample_code
     else:
         py_code = ""
 
     py_code = st.text_area("Python code", value=py_code, height=250)
+    if st.session_state.sample_mode:
+        st.session_state.py_sample_code = py_code
 
     with StringIO() as out, redirect_stdout(out):
         st.caption("Python output")
