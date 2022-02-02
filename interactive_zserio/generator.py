@@ -83,11 +83,13 @@ class Generator(Widget):
         self._log("compile:", args)
         completed_process = zserio.run_compiler(args)
         if completed_process.returncode != 0:
-            st.error(completed_process.stderr)
+            # double whitespace needed before a newline for markdown to render the newline
+            # see https://github.com/streamlit/streamlit/issues/868
+            st.error(completed_process.stderr.replace("\n", "  \n"))
             return False
 
         # show zserio warnings
         if completed_process.stderr:
-            st.warning(completed_process.stderr)
+            st.warning(completed_process.stderr.replace("\n", "  \n"))
 
         return True
