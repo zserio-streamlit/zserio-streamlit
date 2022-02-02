@@ -6,6 +6,7 @@ from io import StringIO
 from contextlib import redirect_stdout, redirect_stderr
 
 from interactive_zserio.widget import Widget
+from interactive_zserio.file_manager import FileManager
 from interactive_zserio.editor import Editor
 
 class PythonRunner(Widget):
@@ -17,9 +18,11 @@ class PythonRunner(Widget):
     def render(self):
         self._log("render")
 
-        code_file_path = os.path.join(self._src_dir, self.CODE_FILENAME)
-        if not os.path.exists(code_file_path):
-            open(code_file_path, "w").close()
+        python_file_manager = FileManager("python_file_manager", self._src_dir, "py")
+        python_file_manager.render()
+
+        python_editor = Editor("python_editor", self._src_dir, python_file_manager.selected_file)
+        python_editor.render()
 
         sys.dont_write_bytecode = True
         if sys.path[-1] != self._python_gen_dir:
@@ -27,12 +30,10 @@ class PythonRunner(Widget):
 
         modules_keys = set(sys.modules.keys())
 
-        python_editor = Editor("python_editor", self._src_dir, self.CODE_FILENAME)
-        python_editor.render()
-
         with StringIO() as out, redirect_stdout(out):
             st.caption("Python output")
             try:
+                self._log("executing code:", python_file_manager.selected_file)
                 exec(python_editor.content)
                 st.text(out.getvalue())
             except Exception as e:
@@ -43,5 +44,3 @@ class PythonRunner(Widget):
         modules_to_remove = new_modules_keys - modules_keys
         for module_to_remove in modules_to_remove:
             sys.modules.pop(module_to_remove)
-
-    CODE_FILENAME = "code.py"

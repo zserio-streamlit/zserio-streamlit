@@ -27,7 +27,7 @@ class FileManager(Widget):
 
             cols[1].title("")
             remove_file = cols[1].button("❌ Delete", disabled=(selected_file == "Create new..."),
-                                         help="Remove the selected file.")
+                                         key=self._key("delete_button"), help="Remove the selected file.")
             if remove_file:
                 self._log("removing file:", selected_file)
                 os.remove(os.path.join(self._folder, selected_file))
@@ -52,18 +52,19 @@ class FileManager(Widget):
 
     def _create_new_file(self):
         self._log("about to create file")
-        file_path = st.text_input("Choose file path to create",
-                                  help="Enter relative path of the file to create.")
-        if not file_path:
+        new_file_path = st.text_input(f"Choose *.{self._extension} file path to create",
+                                      key=self._key("new_file_path"),
+                                      help="Enter relative path of the file to create.")
+        if not new_file_path:
             st.stop()
-        if not file_path.endswith("." + self._extension):
+        if not new_file_path.endswith("." + self._extension):
             st.error("Must have *." + self._extension + " extension!")
             st.stop()
 
-        self._log("creating file:", file_path)
-        open(os.path.join(self._folder, file_path), "w").close()
+        self._log("creating file:", new_file_path)
+        open(os.path.join(self._folder, new_file_path), "w").close()
 
-        return file_path
+        return new_file_path
 
     def _list_files(self):
         listed_files = []

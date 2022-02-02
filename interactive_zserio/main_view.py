@@ -80,11 +80,12 @@ class MainView(Widget):
 
     def _schema_mode_on_change(self):
         shutil.rmtree(self._ws_dir, ignore_errors=True)
-        os.makedirs(self._ws_dir)
-        os.makedirs(self._zs_dir)
-        os.makedirs(self._gen_dir)
-        os.makedirs(self._src_dir)
 
         if st.session_state[self._key("schema_mode")] == "sample":
-            shutil.copy("sample_src/sample.zs", self._zs_dir)
-            shutil.copy("sample_src/sample.py", os.path.join(self._src_dir, PythonRunner.CODE_FILENAME))
+            shutil.copytree("sample_workspace", self._ws_dir)
+
+        os.makedirs(self._ws_dir, exist_ok=True)
+        os.makedirs(self._zs_dir, exist_ok=True)
+        os.makedirs(self._gen_dir, exist_ok=True)
+        os.makedirs(self._src_dir, exist_ok=True)
+
