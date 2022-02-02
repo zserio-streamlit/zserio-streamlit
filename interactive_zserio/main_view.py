@@ -26,6 +26,10 @@ class MainView(Widget):
                                                 self._new_schema_file_callback)
         self._schema_editor = Editor("schema_editor", self._zs_dir)
         self._generator = Generator(self._zs_dir, self._gen_dir)
+        self._sources_viewer = SourcesViewer(self._gen_dir)
+
+        self._python_runner = PythonRunner(os.path.join(self._gen_dir, "python"),
+                                           os.path.join(self._src_dir, "python"))
 
         if self._key("schema_mode") not in st.session_state:
             # initialize on the first run or after refresh (F5)
@@ -54,15 +58,13 @@ class MainView(Widget):
         self._generator.set_zs_file_path(self._schema_file_manager.selected_file)
         self._generator.render()
 
-        sources_viewer = SourcesViewer(self._gen_dir, self._generator.generators)
-        sources_viewer.render()
+        self._sources_viewer.set_generators(self._generator.generators)
+        self._sources_viewer.render()
 
         python_code_check = st.checkbox("Experimental python code", value=True,
                                         help="Python generator must be enabled")
         if python_code_check and self._generator.generators["python"]:
-            python_runner = PythonRunner(os.path.join(self._gen_dir, "python"),
-                                         os.path.join(self._src_dir, "python"))
-            python_runner.render()
+            self._python_runner.render()
 
         self._compress_ws()
 

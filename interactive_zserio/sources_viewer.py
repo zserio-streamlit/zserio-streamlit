@@ -6,9 +6,12 @@ from glob import glob
 from interactive_zserio.widget import Widget
 
 class SourcesViewer(Widget):
-    def __init__(self, gen_dir, generators):
+    def __init__(self, gen_dir):
         super().__init__("sources_viewer")
         self._gen_dir = gen_dir
+        self._generators = None
+
+    def set_generators(self, generators):
         self._generators = generators
 
     def render(self):
