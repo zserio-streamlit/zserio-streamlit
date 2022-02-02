@@ -4,11 +4,15 @@ import streamlit as st
 from interactive_zserio.widget import Widget
 
 class Editor(Widget):
-    def __init__(self, name, root_dir, file_path):
+    def __init__(self, name, root_dir):
         super().__init__(name)
         self._root_dir = root_dir
-        self._file_path = file_path
+
+        self._file_path = None
         self._content = None
+
+    def set_file(self, file_path):
+        self._file_path = file_path
 
     def render(self):
         self._log("render")

@@ -14,7 +14,8 @@ class Uploader(Widget):
 
     def render(self):
         self._log("render")
-        upload_help="Upload either a simple schema file *.zs, or complex schema as a *.zip."
+        upload_help = "Upload either a simple schema file *.zs, or complex schema as a *.zip or even "
+        upload_help += "the whole workspace as a *.zip."
         uploaded_schema = st.file_uploader("Upload schema", type=["zs","zip"], help=upload_help,
                                            key=self._key("uploaded_schema"), on_change=self._on_change)
         if not uploaded_schema:
@@ -32,7 +33,7 @@ class Uploader(Widget):
             self._log("processing *.zs file:", uploaded_file.name)
             with open(os.path.join(self._zs_dir, uploaded_file.name), "wb") as zs_file:
                 zs_file.write(uploaded_file.read())
-        else:
+        elif uploaded_file.name.endswith(".zip"):
             with ZipFile(uploaded_file, "r") as zip_file:
                 if all(name.startswith(self._ws_dir) for name in zip_file.namelist()):
                     self._log("processing *.zip workspace file:", uploaded_file.name)
@@ -41,3 +42,5 @@ class Uploader(Widget):
                 else:
                     self._log("processing *.zip schema file:", uploaded_file.name)
                     zip_file.extractall(self._zs_dir)
+        else:
+            st.error("Unsupported uploaded file type")

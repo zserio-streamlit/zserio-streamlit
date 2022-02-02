@@ -15,14 +15,16 @@ class PythonRunner(Widget):
         self._python_gen_dir = python_gen_dir
         self._src_dir = src_dir
 
+        self._python_file_manager = FileManager("python_file_manager", self._src_dir, "py")
+        self._python_editor = Editor("python_editor", self._src_dir)
+
     def render(self):
         self._log("render")
 
-        python_file_manager = FileManager("python_file_manager", self._src_dir, "py")
-        python_file_manager.render()
+        self._python_file_manager.render()
 
-        python_editor = Editor("python_editor", self._src_dir, python_file_manager.selected_file)
-        python_editor.render()
+        self._python_editor.set_file(self._python_file_manager.selected_file)
+        self._python_editor.render()
 
         sys.dont_write_bytecode = True
         if sys.path[-1] != self._python_gen_dir:
@@ -33,10 +35,11 @@ class PythonRunner(Widget):
         with StringIO() as out, redirect_stdout(out):
             st.caption("Python output")
             try:
-                self._log("executing code:", python_file_manager.selected_file)
-                exec(python_editor.content)
+                self._log("executing code:", self._python_file_manager.selected_file)
+                exec(self._python_editor.content)
                 st.text(out.getvalue())
             except Exception as e:
+                st.text(out.getvalue())
                 st.error(e)
 
         # allow to reload modules imported by the python code

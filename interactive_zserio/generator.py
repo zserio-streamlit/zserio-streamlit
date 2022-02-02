@@ -6,11 +6,12 @@ import zserio
 from interactive_zserio.widget import Widget
 
 class Generator(Widget):
-    def __init__(self, zs_dir, zs_file_path, gen_dir):
+    def __init__(self, zs_dir, gen_dir):
         super().__init__("generator")
         self._zs_dir = zs_dir
-        self._zs_file_path = zs_file_path
         self._gen_dir = gen_dir
+
+        self._zs_file_path = None
 
         self._extra_arguments = ""
         self._generators = {
@@ -20,6 +21,9 @@ class Generator(Widget):
             "xml": False,
             "doc" : False
         }
+
+    def set_zs_file_path(self, zs_file_path):
+        self._zs_file_path = zs_file_path
 
     def render(self):
         self._log("render")
@@ -36,14 +40,37 @@ class Generator(Widget):
             self._generators[generator] = generators_checks[i]
 
         # TODO: Should we prevent recompilation if not needed? How to safely detect it?
-        shutil.rmtree(self._gen_dir)
-        os.makedirs(self._gen_dir)
-        if not self._compile():
-            st.stop()
+        if self._needs_recompilation():
+            shutil.rmtree(self._gen_dir)
+            os.makedirs(self._gen_dir)
+            with st.spinner("Compiling..."):
+                if not self._compile():
+                    st.stop()
+        else:
+            st.info("No recompilation needed")
 
     @property
     def generators(self):
         return self._generators
+
+    def reset(self):
+        self._log("reset")
+        if self._key("recompile_params") in st.session_state:
+            del st.session_state[self._key("recompile_params")]
+
+    def _needs_recompilation(self):
+        with open(os.path.join(self._zs_dir, self._zs_file_path), "r") as zs_file:
+            recompile_params = (self._generators, self._extra_args, self._zs_file_path,
+                                zs_file.read())
+
+        self._log("recompile_params:", recompile_params)
+
+        if (self._key("recompile_params") not in st.session_state or
+            st.session_state[self._key("recompile_params")] != recompile_params):
+            st.session_state[self._key("recompile_params")] = recompile_params
+            return True
+
+        return False
 
     def _compile(self):
         args = []

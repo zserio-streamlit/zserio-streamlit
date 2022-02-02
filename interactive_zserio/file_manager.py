@@ -4,10 +4,12 @@ import streamlit as st
 from interactive_zserio.widget import Widget
 
 class FileManager(Widget):
-    def __init__(self, name, folder, extension):
+    def __init__(self, name, folder, extension, new_file_callback=None):
         super().__init__(name)
         self._folder = folder
         self._extension = extension
+        self._new_file_callback = new_file_callback
+
         self._selected_file = None
 
     def render(self):
@@ -21,7 +23,8 @@ class FileManager(Widget):
             options.append("Create new...")
 
             cols = st.columns([7, 1])
-            selected_file = cols[0].selectbox("File chooser", options, key=self._key("selected_file"),
+            selected_file = cols[0].selectbox(f"File chooser (*.{self._extension})", options,
+                                              key=self._key("selected_file"),
                                               on_change=self._selected_file_on_change,
                                               help="Choose file to edit.")
 
@@ -61,8 +64,15 @@ class FileManager(Widget):
             st.error("Must have *." + self._extension + " extension!")
             st.stop()
 
+        new_file_full_path = os.path.join(self._folder, new_file_path)
+        full_path, file_name = os.path.split(new_file_full_path)
+        os.makedirs(full_path, exist_ok=True)
+
         self._log("creating file:", new_file_path)
-        open(os.path.join(self._folder, new_file_path), "w").close()
+        open(new_file_full_path, "w").close()
+
+        if self._new_file_callback:
+            self._new_file_callback(self._folder, new_file_path)
 
         return new_file_path
 

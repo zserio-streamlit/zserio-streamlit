@@ -1,5 +1,3 @@
-import streamlit as st
-
 from interactive_zserio.logger import Logger
 
 class Widget:
