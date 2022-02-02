@@ -1,6 +1,8 @@
 import os
 import streamlit as st
 
+from streamlit_ace import st_ace
+
 from interactive_zserio.widget import Widget
 
 class Editor(Widget):
@@ -18,17 +20,18 @@ class Editor(Widget):
         self._log("render")
         with open(os.path.join(self._root_dir, self._file_path), "r") as f:
             self._log("reading file:", self._file_path)
-            st.session_state[self._key("file_content")] = f.read()
+            content = f.read()
 
-        st.text_area(self._file_path, height=250, key=self._key("file_content"), on_change=self._on_change)
-
-        self._content = st.session_state[self._key("file_content")]
+        # changing the key causes the content change - i.e. change it for each file!
+        # (whitout changing the key, assigning the old content won't affect the real content of the editor)
+        # see https://github.com/okld/streamlit-ace/issues/28
+        self._content = st_ace(content, key=self._key("content" + self._file_path), min_lines=12)
+        if self._content != content:
+            with open(os.path.join(self._root_dir, self._file_path), "w") as f:
+                self._log("writing file:", self._file_path)
+                f.write(self._content)
 
     @property
     def content(self):
         return self._content
 
-    def _on_change(self):
-        with open(os.path.join(self._root_dir, self._file_path), "w") as f:
-            self._log("writing file:", self._file_path)
-            f.write(st.session_state[self._key("file_content")])
