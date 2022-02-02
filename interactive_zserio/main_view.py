@@ -65,10 +65,8 @@ class MainView(Widget):
         self._sources_viewer.set_generators(self._generator.generators)
         self._sources_viewer.render()
 
-        python_code_check = st.checkbox("Experimental python code", value=True,
-                                        help="Python generator must be enabled")
-        if python_code_check and self._generator.generators["python"]:
-            self._python_runner.render()
+        self._python_runner.set_python_generated(self._generator.generators["python"])
+        self._python_runner.render()
 
         self._workspace_downloader.render()
 

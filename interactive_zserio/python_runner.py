@@ -18,8 +18,18 @@ class PythonRunner(Widget):
         self._python_file_manager = FileManager("python_file_manager", self._src_dir, "py")
         self._python_editor = Editor("python_editor", self._src_dir)
 
+        self._python_generated = None
+
+    def set_python_generated(self, python_generated):
+        self._python_generated = python_generated
+
     def render(self):
         self._log("render")
+
+        python_runner_check = st.checkbox("Experimental python code", value=True,
+                                          help="Python generator must be enabled")
+        if not python_runner_check or not self._python_generated:
+            return
 
         self._python_file_manager.render()
 
