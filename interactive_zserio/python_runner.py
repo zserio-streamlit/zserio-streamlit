@@ -16,7 +16,7 @@ class PythonRunner(Widget):
         self._src_dir = src_dir
 
         self._python_file_manager = FileManager("python_file_manager", self._src_dir, "py")
-        self._python_editor = Editor("python_editor", self._src_dir)
+        self._python_editor = Editor("python_editor", self._src_dir, lang="python")
 
         self._python_generated = None
 

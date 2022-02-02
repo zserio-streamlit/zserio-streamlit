@@ -6,11 +6,12 @@ from streamlit_ace import st_ace
 from interactive_zserio.widget import Widget
 
 class Editor(Widget):
-    def __init__(self, name, root_dir):
+    def __init__(self, name, root_dir, *, lang=None):
         super().__init__(name)
         self._root_dir = root_dir
 
         self._file_path = None
+        self._lang = lang
         self._content = None
 
     def set_file(self, file_path):
@@ -25,7 +26,8 @@ class Editor(Widget):
         # changing the key causes the content change - i.e. change it for each file!
         # (whitout changing the key, assigning the old content won't affect the real content of the editor)
         # see https://github.com/okld/streamlit-ace/issues/28
-        self._content = st_ace(content, key=self._key("content" + self._file_path), min_lines=12)
+        self._content = st_ace(content, key=self._key("content" + self._file_path),
+                               min_lines=12, language=self._lang)
         if self._content != content:
             with open(os.path.join(self._root_dir, self._file_path), "w") as f:
                 self._log("writing file:", self._file_path)
