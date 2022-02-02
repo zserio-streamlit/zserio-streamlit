@@ -86,4 +86,8 @@ class Generator(Widget):
             st.error(completed_process.stderr)
             return False
 
+        # show zserio warnings
+        if completed_process.stderr:
+            st.warning(completed_process.stderr)
+
         return True
