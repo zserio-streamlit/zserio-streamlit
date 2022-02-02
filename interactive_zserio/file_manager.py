@@ -20,12 +20,12 @@ class FileManager(Widget):
             if self._key("initial_option") in st.session_state:
                 st.session_state[self._key("selected_file")] = st.session_state[self._key("initial_option")]
 
+            options.append("Create new...")
+
             # reset if selected file is not present in current options
             if self._key("selected_file") in st.session_state:
                 if st.session_state[self._key("selected_file")] not in options:
                     del st.session_state[self._key("selected_file")]
-
-            options.append("Create new...")
 
             cols = st.columns([7, 1])
             selected_file = cols[0].selectbox(f"File chooser (*.{self._extension})", options,
