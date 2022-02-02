@@ -39,7 +39,6 @@ class Generator(Widget):
         for i, generator in enumerate(self._generators):
             self._generators[generator] = generators_checks[i]
 
-        # TODO: Should we prevent recompilation if not needed? How to safely detect it?
         if self._needs_recompilation():
             shutil.rmtree(self._gen_dir)
             os.makedirs(self._gen_dir)

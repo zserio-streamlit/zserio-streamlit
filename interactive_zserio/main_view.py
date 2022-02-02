@@ -2,8 +2,6 @@ import os
 import shutil
 import streamlit as st
 
-from zipfile import ZipFile
-
 from interactive_zserio.widget import Widget
 from interactive_zserio.uploader import Uploader
 from interactive_zserio.file_manager import FileManager
@@ -11,6 +9,7 @@ from interactive_zserio.editor import Editor
 from interactive_zserio.generator import Generator
 from interactive_zserio.sources_viewer import SourcesViewer
 from interactive_zserio.python_runner import PythonRunner
+from interactive_zserio.downloader import Downloader
 
 class MainView(Widget):
     def __init__(self):
@@ -19,7 +18,7 @@ class MainView(Widget):
         self._zs_dir = os.path.join(self._ws_dir, "zs")
         self._gen_dir = os.path.join(self._ws_dir, "gen")
         self._src_dir = os.path.join(self._ws_dir, "src")
-        self._zip_filename = "workspace.zip"
+        self._zip_name = "workspace.zip"
 
         self._uploader = Uploader(self._ws_dir, self._zs_dir)
         self._schema_file_manager = FileManager("schema_file_manager", self._zs_dir, "zs",
@@ -30,6 +29,11 @@ class MainView(Widget):
 
         self._python_runner = PythonRunner(os.path.join(self._gen_dir, "python"),
                                            os.path.join(self._src_dir, "python"))
+
+        self._workspace_downloader = Downloader("workspace_downloader", self._ws_dir, self._zip_name,
+                                                label="Download workspace",
+                                                help="Download whole workspace as a zip file.",
+                                                exclude_extensions=["zip"])
 
         if self._key("schema_mode") not in st.session_state:
             # initialize on the first run or after refresh (F5)
@@ -66,24 +70,7 @@ class MainView(Widget):
         if python_code_check and self._generator.generators["python"]:
             self._python_runner.render()
 
-        self._compress_ws()
-
-    def _compress_ws(self):
-        zip_path = os.path.join(self._ws_dir, self._zip_filename)
-        if os.path.exists(zip_path):
-            os.remove(zip_path)
-
-        files_to_zip = []
-        for root, _, files in os.walk(self._ws_dir):
-            for f in files:
-                files_to_zip.append(os.path.join(root, f))
-        with ZipFile(zip_path, "w") as zip_file:
-            for f in files_to_zip:
-                zip_file.write(f)
-
-        with open(zip_path, "rb") as zip_file:
-            st.download_button("Download workspace", zip_file, mime="application/zip",
-                               help="Download whole workspace as a zip file.")
+        self._workspace_downloader.render()
 
     def _new_schema_file_callback(self, folder, file_path):
         package_definition = ".".join(os.path.splitext(file_path)[0].split(os.sep))
