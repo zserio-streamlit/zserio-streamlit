@@ -37,8 +37,7 @@ class PythonRunner(Widget):
         self._python_editor.render()
 
         sys.dont_write_bytecode = True
-        if sys.path[-1] != self._python_gen_dir:
-            sys.path.append(self._python_gen_dir)
+        sys.path.append(self._python_gen_dir)
 
         modules_keys = set(sys.modules.keys())
 
@@ -57,3 +56,5 @@ class PythonRunner(Widget):
         modules_to_remove = new_modules_keys - modules_keys
         for module_to_remove in modules_to_remove:
             sys.modules.pop(module_to_remove)
+
+        sys.path.remove(self._python_gen_dir)
