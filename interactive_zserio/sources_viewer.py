@@ -29,7 +29,7 @@ class SourcesViewer(Widget):
         for source in generated_sources:
             if os.path.isfile(source):
                 with open(source, "r") as source_file:
-                    with st.expander(source):
+                    with st.expander(os.path.relpath(source, self._gen_dir)):
                         st.code(source_file.read(), self._map_highlighting(generator))
 
     def _map_highlighting(self, generator):
