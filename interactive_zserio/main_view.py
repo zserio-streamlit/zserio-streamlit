@@ -2,6 +2,8 @@ import os
 import shutil
 import streamlit as st
 
+from tempfile import TemporaryDirectory
+
 from interactive_zserio.widget import Widget
 from interactive_zserio.uploader import Uploader
 from interactive_zserio.file_manager import FileManager
@@ -14,7 +16,14 @@ from interactive_zserio.downloader import Downloader
 class MainView(Widget):
     def __init__(self):
         super().__init__("main_view")
-        self._ws_dir = "workspace"
+
+        if self._key("workspace_dir") not in st.session_state:
+            # TemporaryDirectory will be automatically deleted when the session is ended,
+            # thus we won't spoil the temp.
+            st.session_state[self._key("workspace_dir")] = TemporaryDirectory(prefix="interactive_zserio_")
+            self._log("created new workspace directory:", st.session_state[self._key("workspace_dir")])
+
+        self._ws_dir = st.session_state[self._key("workspace_dir")].name
         self._zs_dir = os.path.join(self._ws_dir, "zs")
         self._gen_dir = os.path.join(self._ws_dir, "gen")
         self._src_dir = os.path.join(self._ws_dir, "src")
