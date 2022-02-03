@@ -1,9 +1,9 @@
-import os
 import streamlit as st
+import subprocess
 import sys
 
 from io import StringIO
-from contextlib import redirect_stdout, redirect_stderr
+from contextlib import redirect_stdout
 
 from interactive_zserio.widget import Widget
 from interactive_zserio.file_manager import FileManager
@@ -36,25 +36,27 @@ class PythonRunner(Widget):
         self._python_editor.set_file(self._python_file_manager.selected_file)
         self._python_editor.render()
 
-        sys.dont_write_bytecode = True
-        sys.path.append(self._python_gen_dir)
+        self._log("executing code:", self._python_file_manager.selected_file)
 
-        modules_keys = set(sys.modules.keys())
+        try:
+            completed_process = subprocess.run(
+                [sys.executable, "-c", self._python_editor.content],
+                cwd=self._python_gen_dir,
+                env={
+                    "PYTHONDONTWRITEBYTECODE" : "1"
+                },
+                capture_output=True, text=True,
+                timeout=5
+            )
 
-        with StringIO() as out, redirect_stdout(out):
             st.caption("Python output")
-            try:
-                self._log("executing code:", self._python_file_manager.selected_file)
-                exec(self._python_editor.content)
-                st.text(out.getvalue())
-            except Exception as e:
-                st.text(out.getvalue())
-                st.error(e)
+            if completed_process.stdout:
+                st.text(completed_process.stdout)
+            if completed_process.stderr:
+                st.error(completed_process.stderr)
+        except subprocess.TimeoutExpired as e:
+            st.error(f"{e.timeout}s timeout expired!")
+        except Exception as e:
+            st.error(e)
 
-        # allow to reload modules imported by the python code
-        new_modules_keys = set(sys.modules.keys())
-        modules_to_remove = new_modules_keys - modules_keys
-        for module_to_remove in modules_to_remove:
-            sys.modules.pop(module_to_remove)
 
-        sys.path.remove(self._python_gen_dir)
