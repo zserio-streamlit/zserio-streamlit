@@ -17,19 +17,20 @@ class MainView(Widget):
     def __init__(self):
         super().__init__("main_view")
 
-        if self._key("workspace_dir") not in st.session_state:
+        if self._key("temp_dir") not in st.session_state:
             # TemporaryDirectory will be automatically deleted when the session is ended,
             # thus we won't spoil the temp.
-            st.session_state[self._key("workspace_dir")] = TemporaryDirectory(prefix="interactive_zserio_")
-            self._log("created new workspace directory:", st.session_state[self._key("workspace_dir")])
+            st.session_state[self._key("temp_dir")] = TemporaryDirectory(prefix="interactive_zserio_")
+            self._log("created new temp directory:", st.session_state[self._key("temp_dir")])
 
-        self._ws_dir = st.session_state[self._key("workspace_dir")].name
+        self._tmp_dir = st.session_state[self._key("temp_dir")].name
+        self._ws_dir = os.path.join(self._tmp_dir, "workspace")
         self._zs_dir = os.path.join(self._ws_dir, "zs")
         self._gen_dir = os.path.join(self._ws_dir, "gen")
         self._src_dir = os.path.join(self._ws_dir, "src")
         self._zip_name = "workspace.zip"
 
-        self._uploader = Uploader(self._ws_dir, self._zs_dir)
+        self._uploader = Uploader(self._tmp_dir, self._ws_dir, self._zs_dir)
         self._schema_file_manager = FileManager("schema_file_manager", self._zs_dir, "zs",
                                                 self._new_schema_file_callback)
         self._schema_editor = Editor("schema_editor", self._zs_dir)
@@ -39,7 +40,8 @@ class MainView(Widget):
         self._python_runner = PythonRunner(os.path.join(self._gen_dir, "python"),
                                            os.path.join(self._src_dir, "python"))
 
-        self._workspace_downloader = Downloader("workspace_downloader", self._ws_dir, self._zip_name,
+        self._workspace_downloader = Downloader("workspace_downloader",
+                                                self._tmp_dir, self._ws_dir, self._zip_name,
                                                 label="Download workspace",
                                                 help="Download whole workspace as a zip file.",
                                                 exclude_extensions=["zip"])

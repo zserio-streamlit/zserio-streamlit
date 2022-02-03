@@ -6,10 +6,11 @@ from zipfile import ZipFile
 from interactive_zserio.widget import Widget
 
 class Downloader(Widget):
-    def __init__(self, name, folder, zip_name, zip_folder=None, *, label=None, help=None,
+    def __init__(self, name, root, folder, zip_name, zip_folder=None, *, label=None, help=None,
                  exclude_extensions=None):
         super().__init__(name)
 
+        self._root = root
         self._folder = folder
         self._zip_name = zip_name
         self._zip_folder = zip_folder if zip_folder is not None else folder
@@ -31,7 +32,7 @@ class Downloader(Widget):
                     files_to_zip.append(os.path.join(root, f))
         with ZipFile(zip_path, "w") as zip_file:
             for f in files_to_zip:
-                zip_file.write(f)
+                zip_file.write(f, os.path.relpath(f, self._root))
 
         with open(zip_path, "rb") as zip_file:
             st.download_button(self._label, zip_file, mime="application/zip", help=self._help)

@@ -7,9 +7,11 @@ from zipfile import ZipFile
 from interactive_zserio.widget import Widget
 
 class Uploader(Widget):
-    def __init__(self, ws_dir, zs_dir):
+    def __init__(self, tmp_dir, ws_dir, zs_dir):
         super().__init__("uploader")
+        self._tmp_dir = tmp_dir
         self._ws_dir = ws_dir
+        self._ws_name = os.path.relpath(ws_dir, tmp_dir)
         self._zs_dir = zs_dir
 
     def render(self):
@@ -35,10 +37,10 @@ class Uploader(Widget):
                 zs_file.write(uploaded_file.read())
         elif uploaded_file.name.endswith(".zip"):
             with ZipFile(uploaded_file, "r") as zip_file:
-                if all(name.startswith(self._ws_dir) for name in zip_file.namelist()):
+                if all(name.startswith(self._ws_name) for name in zip_file.namelist()):
                     self._log("processing *.zip workspace file:", uploaded_file.name)
                     shutil.rmtree(self._ws_dir)
-                    zip_file.extractall()
+                    zip_file.extractall(self._tmp_dir)
                 else:
                     self._log("processing *.zip schema file:", uploaded_file.name)
                     zip_file.extractall(self._zs_dir)
