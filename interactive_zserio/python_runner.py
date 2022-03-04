@@ -2,9 +2,6 @@ import streamlit as st
 import subprocess
 import sys
 
-from io import StringIO
-from contextlib import redirect_stdout
-
 from interactive_zserio.widget import Widget
 from interactive_zserio.file_manager import FileManager
 from interactive_zserio.editor import Editor
@@ -58,5 +55,3 @@ class PythonRunner(Widget):
             st.error(f"{e.timeout}s timeout expired!")
         except Exception as e:
             st.error(e)
-
-

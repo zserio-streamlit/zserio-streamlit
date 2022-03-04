@@ -1,6 +1,7 @@
 import os
 import shutil
 import streamlit as st
+import zserio
 
 from tempfile import TemporaryDirectory
 
@@ -55,9 +56,9 @@ class MainView(Widget):
         self._log("render")
         st.set_page_config(layout="wide", page_title="Interactive Zserio", page_icon="./img/zs.png")
 
-        st.write("""
-            # Interactive Zserio Compiler!
-        """)
+        st.write(f"""
+            <h1>Interactive Zserio<sup style="top: -2em;">{zserio.VERSION_STRING}</sup> Compiler!</h1>
+        """, unsafe_allow_html=True)
 
         schema_modes = { "write": "Write schema", "upload": "Upload schema or workspace", "sample": "Sample" }
         schema_mode = st.selectbox("Schema", schema_modes, format_func=lambda x: schema_modes[x],
