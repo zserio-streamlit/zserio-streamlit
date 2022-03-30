@@ -1,3 +1,3 @@
 streamlit
 streamlit_ace
-zserio==2.5.0
+zserio==2.5.1
