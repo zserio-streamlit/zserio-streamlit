@@ -1,0 +1,25 @@
+{
+    "generator": {
+        "extra_args": "",
+        "generators": {
+            "cpp": false,
+            "doc": false,
+            "java": false,
+            "python": true,
+            "xml": false
+        }
+    },
+    "python_runner": true,
+    "ws": {
+        "src": {
+            "python": [{
+                "content": "import zserio\nimport sample.api as sample\n\ndata = sample.Data(13, \"thirteen\")\nwriter = zserio.BitStreamWriter()\ndata.write(writer)\nprint(f\"serialized data: {writer.byte_array}\")\n\nreader = zserio.BitStreamReader(writer.byte_array)\nread_data = sample.Data.from_reader(reader)\nprint(f\"read_data: id={read_data.id} text: {read_data.text}\")\n",
+                "name": "sample_code.py"
+            }]
+        },
+        "zs": [{
+            "content": "package sample;\n\nstruct Data\n{\n    uint32 id;\n    string text;\n};\n",
+            "name": "sample.zs"
+        }]
+    }
+}

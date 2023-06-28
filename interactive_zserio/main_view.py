@@ -6,6 +6,9 @@ import zserio
 from tempfile import TemporaryDirectory
 
 from interactive_zserio.widget import Widget
+from interactive_zserio.workspace import Workspace
+from interactive_zserio.urlutil import URLUtil
+from interactive_zserio.share_rtdb import ShareRTDB
 from interactive_zserio.uploader import Uploader
 from interactive_zserio.file_manager import FileManager
 from interactive_zserio.editor import Editor
@@ -24,46 +27,58 @@ class MainView(Widget):
             st.session_state[self._key("temp_dir")] = TemporaryDirectory(prefix="interactive_zserio_")
             self._log("created new temp directory:", st.session_state[self._key("temp_dir")])
 
-        self._tmp_dir = st.session_state[self._key("temp_dir")].name
-        self._ws_dir = os.path.join(self._tmp_dir, "workspace")
-        self._zs_dir = os.path.join(self._ws_dir, "zs")
-        self._gen_dir = os.path.join(self._ws_dir, "gen")
-        self._src_dir = os.path.join(self._ws_dir, "src")
+        self._urlutil = URLUtil()
+        self._workspace = Workspace(os.path.join(self._tmp_dir, "workspace"))
         self._zip_name = "workspace.zip"
 
-        self._uploader = Uploader(self._tmp_dir, self._ws_dir, self._zs_dir)
-        self._schema_file_manager = FileManager("schema_file_manager", self._zs_dir, "zs",
+        self._uploader = Uploader(self._tmp_dir, self._workspace.ws_dir, self._workspace.zs_dir)
+        self._schema_file_manager = FileManager("schema_file_manager", self._workspace.zs_dir, "zs",
                                                 self._new_schema_file_callback)
-        self._schema_editor = Editor("schema_editor", self._zs_dir)
-        self._generator = Generator(self._zs_dir, self._gen_dir)
-        self._sources_viewer = SourcesViewer(self._gen_dir)
+        self._schema_editor = Editor("schema_editor", self._workspace.zs_dir)
+        self._generator = Generator(self._workspace.zs_dir, self._workspace.gen_dir)
+        self._sources_viewer = SourcesViewer(self._workspace.gen_dir)
 
-        self._python_runner = PythonRunner(os.path.join(self._gen_dir, "python"),
-                                           os.path.join(self._src_dir, "python"))
+        self._python_runner = PythonRunner(os.path.join(self._workspace.gen_dir, "python"),
+                                           os.path.join(self._workspace.src_dir, "python"))
+
+        self._share = ShareRTDB(self._workspace, self._generator, self._python_runner)
 
         self._workspace_downloader = Downloader("workspace_downloader",
-                                                self._tmp_dir, self._ws_dir, self._zip_name,
+                                                self._tmp_dir, self._workspace.ws_dir, self._zip_name,
                                                 label="Download workspace",
                                                 help="Download whole workspace as a zip file.",
                                                 exclude_extensions=["zip"])
 
         if self._key("schema_mode") not in st.session_state:
             # initialize on the first run or after refresh (F5)
-            st.session_state[self._key("schema_mode")] = "sample"
-            self._schema_mode_on_change()
+            st.set_page_config(layout="wide", page_title="Interactive Zserio", page_icon="./img/zs.png")
+            self._workspace.create()
+
+            query_params = self._urlutil.get_url_params()
+            share_id = query_params["share_id"][0] if ("share_id") in query_params else None
+            if not (share_id and self._restore_share(share_id)):
+                st.session_state[self._key("schema_mode")] = "sample"
+                self._share.restore_sample()
+
+    @property
+    def _tmp_dir(self):
+        return st.session_state[self._key("temp_dir")].name
+
+    @property
+    def _schema_mode(self):
+        return st.session_state[self._key("schema_mode")]
 
     def render(self):
         self._log("render")
-        st.set_page_config(layout="wide", page_title="Interactive Zserio", page_icon="./img/zs.png")
 
         st.write(f"""
             <h1>Interactive Zserio<sup style="top: -2em;">{zserio.VERSION_STRING}</sup> Compiler!</h1>
         """, unsafe_allow_html=True)
 
         schema_modes = { "write": "Write schema", "upload": "Upload schema or workspace", "sample": "Sample" }
-        schema_mode = st.selectbox("Schema", schema_modes, format_func=lambda x: schema_modes[x],
-                                   key=self._key("schema_mode"), on_change=self._schema_mode_on_change)
-        if schema_mode == "upload":
+        st.selectbox("Schema", schema_modes, format_func=lambda x: schema_modes[x],
+                     key=self._key("schema_mode"), on_change=self._schema_mode_on_change)
+        if self._schema_mode == "upload":
             self._uploader.render()
 
         self._schema_file_manager.render()
@@ -81,6 +96,20 @@ class MainView(Widget):
         self._python_runner.render()
 
         self._workspace_downloader.render()
+        share_button = st.button("Save & Share Workspace")
+        if share_button:
+            if self._key("share_id") in st.session_state:
+                share_id = st.session_state[self._key("share_id")]
+            else:
+                share_id = self._share.new_id()
+                st.session_state[self._key("share_id")] = share_id
+                self._urlutil.set_url_params({"share_id": share_id})
+            if not self._share.share(share_id):
+                del st.session_state[self._key("share_id")]
+                st.text("sharing failed, please report an issue!")
+
+        if self._key("share_id") in st.session_state:
+            st.code(self._urlutil.get_current_url() + f"?share_id={st.session_state[self._key('share_id')]}")
 
     def _new_schema_file_callback(self, folder, file_path):
         package_definition = ".".join(os.path.splitext(file_path)[0].split(os.sep))
@@ -90,14 +119,16 @@ class MainView(Widget):
 
     def _schema_mode_on_change(self):
         self._generator.reset()
-
-        shutil.rmtree(self._ws_dir, ignore_errors=True)
+        self._workspace.reset()
 
         if st.session_state[self._key("schema_mode")] == "sample":
-            shutil.copytree("sample_workspace", self._ws_dir)
+            self._share.restore_sample()
 
-        os.makedirs(self._ws_dir, exist_ok=True)
-        os.makedirs(self._zs_dir, exist_ok=True)
-        os.makedirs(self._gen_dir, exist_ok=True)
-        os.makedirs(self._src_dir, exist_ok=True)
+    def _restore_share(self, share_id):
+        if self._share.restore(share_id):
+            st.session_state[self._key("schema_mode")] = "write"
+            st.session_state[self._key("share_id")] = share_id
+            return True
 
+        st.warning(f"Failed to restore shared workspace with share_id={share_id}")
+        return False

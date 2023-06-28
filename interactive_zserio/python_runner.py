@@ -20,12 +20,21 @@ class PythonRunner(Widget):
     def set_python_generated(self, python_generated):
         self._python_generated = python_generated
 
+    @property
+    def check(self):
+        return st.session_state[self._key("check")]
+
+    @check.setter
+    def check(self, value):
+        st.session_state[self._key("check")] = value
+
     def render(self):
         self._log("render")
 
-        python_runner_check = st.checkbox("Experimental python code", value=True,
+        st.checkbox("Experimental python code", key=self._key("check"),
+                                          disabled=(not self._python_generated),
                                           help="Python generator must be enabled")
-        if not python_runner_check or not self._python_generated:
+        if not st.session_state[self._key("check")] or not self._python_generated:
             return
 
         self._python_file_manager.render()

@@ -13,14 +13,15 @@ class Generator(Widget):
 
         self._zs_file_path = None
 
-        self._extra_arguments = ""
-        self._generators = {
-            "python": True,
-            "cpp": False,
-            "java": False,
-            "xml": False,
-            "doc" : False
-        }
+    def get_state(self):
+        return {"generators": self.generators, "extra_args": st.session_state[self._key("extra_args")] }
+
+    def set_state(self, state):
+        self._log("set state:", state)
+        for key in state["generators"].keys():
+            st.session_state[self._key("generator_" + key)] = state["generators"][key]
+        if "extra_args" in state:
+            st.session_state[self._key("extra_args")]= state["extra_args"]
 
     def set_zs_file_path(self, zs_file_path):
         self._zs_file_path = zs_file_path
@@ -28,16 +29,15 @@ class Generator(Widget):
     def render(self):
         self._log("render")
 
-        self._extra_args = st.text_input("Extra Arguments").split()
+        st.text_input("Extra Arguments", key=self._key("extra_args"))
 
-        generators_cols = st.columns(len(self._generators))
+        generators_cols = st.columns(len(GENERATORS))
         generators_checks = []
-        for i, (generator, generator_enabled) in enumerate(self._generators.items()):
+        for i, generator in enumerate(GENERATORS):
+            if self._key("generator_" + generator) not in st.session_state:
+                st.session_state[self._key("generator_" + generator)] = False
             with generators_cols[i]:
-                generators_checks.append(st.checkbox(generator, value=generator_enabled))
-
-        for i, generator in enumerate(self._generators):
-            self._generators[generator] = generators_checks[i]
+                generators_checks.append(st.checkbox(generator, key=self._key("generator_" + generator)))
 
         if self._needs_recompilation():
             shutil.rmtree(self._gen_dir)
@@ -50,7 +50,10 @@ class Generator(Widget):
 
     @property
     def generators(self):
-        return self._generators
+        generators = {}
+        for generator in GENERATORS:
+            generators[generator] = st.session_state[self._key("generator_" + generator)]
+        return generators
 
     def reset(self):
         self._log("reset")
@@ -59,8 +62,8 @@ class Generator(Widget):
 
     def _needs_recompilation(self):
         with open(os.path.join(self._zs_dir, self._zs_file_path), "r") as zs_file:
-            recompile_params = (self._generators, self._extra_args, self._zs_file_path,
-                                zs_file.read())
+            recompile_params = (self.generators, st.session_state[self._key("extra_args")],
+                                self._zs_file_path, zs_file.read())
 
         self._log("recompile_params:", recompile_params)
 
@@ -73,10 +76,10 @@ class Generator(Widget):
 
     def _compile(self):
         args = []
-        args += self._extra_args
+        args += st.session_state[self._key("extra_args")].split()
         args += ["-src", self._zs_dir]
         args.append(self._zs_file_path)
-        for generator, checked in self._generators.items():
+        for generator, checked in self.generators.items():
             if checked:
                 args += ["-" + generator, os.path.join(self._gen_dir, generator)]
 
@@ -93,3 +96,11 @@ class Generator(Widget):
             st.warning(completed_process.stderr.replace("\n", "  \n"))
 
         return True
+
+GENERATORS=[
+    "python",
+    "cpp",
+    "java",
+    "xml",
+    "doc",
+]
