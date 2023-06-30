@@ -41,19 +41,54 @@ class ShareRTDB(Widget):
             self._log("shared workspace does not exists:", share_id)
         return False
 
+    def delete_old_shares(self):
+        self._log("deleting old shares")
+        response = requests.get(FIREBASE_RTDB + "user_dates.json",
+                                params={"auth": os.getenv('AUTH_TOKEN')})
+        if response.status_code == HTTPStatus.OK:
+            dates_json = response.json()
+            if dates_json is None:
+                return
+
+            today = datetime.now().date()
+            deletes = {
+                k: None for k, v in dates_json.items() if
+                (today - datetime.fromisoformat(v).date()).days > DAYS_LIMIT
+            }
+
+            result = requests.patch(FIREBASE_RTDB + "user_workspaces.json",
+                                    params={"auth": os.getenv('AUTH_TOKEN')},
+                                    json=deletes)
+            if result.status_code != HTTPStatus.OK:
+                self._log("failed to delete old workspaces")
+
+            result = requests.patch(FIREBASE_RTDB + "user_dates.json",
+                                    params={"auth": os.getenv('AUTH_TOKEN')},
+                                    json=deletes)
+            if result.status_code != HTTPStatus.OK:
+                self._log("failed to delete old dates")
+
     def share(self, share_id):
         self._log("sharing workspace via RTDB as:", share_id)
+
+        result = requests.put(FIREBASE_RTDB + "user_dates/" + share_id + ".json",
+                              params={"auth": os.getenv('AUTH_TOKEN')},
+                              json=datetime.now().date().isoformat())
+        if result.status_code != HTTPStatus.OK:
+            self._log("sharing workspace via RTDB failed:", result.status_code)
+            return False
+
         result = requests.put(FIREBASE_RTDB + "user_workspaces/" + share_id + ".json",
                               params={"auth": os.getenv('AUTH_TOKEN')},
                               json=self._get_json())
         if result.status_code != HTTPStatus.OK:
             self._log("sharing workspace via RTDB failed:", result.status_code)
             return False
+
         return True
 
     def _get_json(self):
         return {
-            "date": datetime.now().date().isoformat(),
             "ws": self._workspace.get_json(),
             "generator": self._generator.get_state(),
             "python_runner": self._python_runner.check
@@ -64,3 +99,4 @@ class ShareRTDB(Widget):
         return uuid.uuid1().hex
 
 FIREBASE_RTDB="https://interactive-zserio-default-rtdb.europe-west1.firebasedatabase.app/"
+DAYS_LIMIT=365

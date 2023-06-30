@@ -98,18 +98,15 @@ class MainView(Widget):
         self._workspace_downloader.render()
         share_button = st.button("Save & Share Workspace")
         if share_button:
-            if self._key("share_id") in st.session_state:
-                share_id = st.session_state[self._key("share_id")]
-            else:
-                share_id = self._share.new_id()
-                st.session_state[self._key("share_id")] = share_id
-                self._urlutil.set_url_params({"share_id": share_id})
-            if not self._share.share(share_id):
-                del st.session_state[self._key("share_id")]
-                st.text("sharing failed, please report an issue!")
+            self._share.delete_old_shares()
 
-        if self._key("share_id") in st.session_state:
-            st.code(self._urlutil.get_current_url() + f"?share_id={st.session_state[self._key('share_id')]}")
+            st.session_state[self._key("share_id")] = self._share.new_id()
+            self._urlutil.set_url_params({"share_id": st.session_state[self._key("share_id")]})
+            if self._share.share(st.session_state[self._key("share_id")]):
+                st.code(self._urlutil.get_current_url() + f"?share_id={st.session_state[self._key('share_id')]}")
+            else:
+                del st.session_state[self._key("share_id")]
+                st.warning("sharing failed, please report an issue!")
 
     def _new_schema_file_callback(self, folder, file_path):
         package_definition = ".".join(os.path.splitext(file_path)[0].split(os.sep))
