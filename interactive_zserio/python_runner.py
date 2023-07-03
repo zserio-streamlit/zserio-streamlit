@@ -22,7 +22,7 @@ class PythonRunner(Widget):
 
     @property
     def check(self):
-        return st.session_state[self._key("check")]
+        return st.session_state[self._key("check")] if self._key("check") in st.session_state else False
 
     @check.setter
     def check(self, value):

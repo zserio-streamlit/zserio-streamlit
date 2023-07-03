@@ -92,13 +92,12 @@ class MainView(Widget):
         self._schema_editor.render()
 
         self._generator.set_zs_file_path(self._schema_file_manager.selected_file)
-        self._generator.render()
+        if self._generator.render():
+            self._sources_viewer.set_generators(self._generator.generators)
+            self._sources_viewer.render()
 
-        self._sources_viewer.set_generators(self._generator.generators)
-        self._sources_viewer.render()
-
-        self._python_runner.set_python_generated(self._generator.generators["python"])
-        self._python_runner.render()
+            self._python_runner.set_python_generated(self._generator.generators["python"])
+            self._python_runner.render()
 
         self._workspace_downloader.render()
         share_button = st.button("Save & Share Workspace")

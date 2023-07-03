@@ -14,7 +14,7 @@ class Generator(Widget):
         self._zs_file_path = None
 
     def get_state(self):
-        return {"generators": self.generators, "extra_args": st.session_state[self._key("extra_args")] }
+        return {"generators": self.generators, "extra_args": self.extra_args }
 
     def set_state(self, state):
         self._log("set state:", state)
@@ -34,25 +34,35 @@ class Generator(Widget):
         generators_cols = st.columns(len(GENERATORS))
         generators_checks = []
         for i, generator in enumerate(GENERATORS):
-            if self._key("generator_" + generator) not in st.session_state:
-                st.session_state[self._key("generator_" + generator)] = False
+            if self._key(generator + "_gen") not in st.session_state:
+                st.session_state[self._key(generator + "_gen")] = False
             with generators_cols[i]:
-                generators_checks.append(st.checkbox(generator, key=self._key("generator_" + generator)))
+                generators_checks.append(st.checkbox(generator, key=self._key(generator + "_gen")))
 
         if self._needs_recompilation():
             shutil.rmtree(self._gen_dir)
             os.makedirs(self._gen_dir)
             with st.spinner("Compiling..."):
                 if not self._compile():
-                    st.stop()
+                    del st.session_state[self._key("recompile_params")]
+                    return False
         else:
             st.info("No recompilation needed")
+        return True
+
+    @property
+    def extra_args(self):
+        return (st.session_state[self._key("extra_args")]
+                if self._key("extra_args") in st.session_state
+                else False)
 
     @property
     def generators(self):
         generators = {}
         for generator in GENERATORS:
-            generators[generator] = st.session_state[self._key("generator_" + generator)]
+            generators[generator] = (st.session_state[self._key(generator + "_gen")]
+                                     if self._key(generator + "_gen") in st.session_state
+                                     else False)
         return generators
 
     def reset(self):
@@ -62,8 +72,7 @@ class Generator(Widget):
 
     def _needs_recompilation(self):
         with open(os.path.join(self._zs_dir, self._zs_file_path), "r") as zs_file:
-            recompile_params = (self.generators, st.session_state[self._key("extra_args")],
-                                self._zs_file_path, zs_file.read())
+            recompile_params = (self.generators, self.extra_args, self._zs_file_path, zs_file.read())
 
         self._log("recompile_params:", recompile_params)
 
