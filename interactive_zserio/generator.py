@@ -19,7 +19,7 @@ class Generator(Widget):
     def set_state(self, state):
         self._log("set state:", state)
         for key in state["generators"].keys():
-            st.session_state[self._key("generator_" + key)] = state["generators"][key]
+            st.session_state[self._key(key + "_gen")] = state["generators"][key]
         if "extra_args" in state:
             st.session_state[self._key("extra_args")]= state["extra_args"]
 
