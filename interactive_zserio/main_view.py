@@ -55,10 +55,15 @@ class MainView(Widget):
             self._workspace.create()
 
             query_params = self._urlutil.get_url_params()
+
+            owner_id = query_params["owner_id"][0] if ("owner_id") in query_params else self._share.new_id()
+            st.session_state[self._key("owner_id")] = owner_id
+
             share_id = query_params["share_id"][0] if ("share_id") in query_params else None
             if not (share_id and self._restore_share(share_id)):
                 st.session_state[self._key("schema_mode")] = "sample"
                 self._share.restore_sample()
+
 
     @property
     def _tmp_dir(self):
@@ -100,10 +105,17 @@ class MainView(Widget):
         if share_button:
             self._share.delete_old_shares()
 
-            st.session_state[self._key("share_id")] = self._share.new_id()
-            self._urlutil.set_url_params({"share_id": st.session_state[self._key("share_id")]})
-            if self._share.share(st.session_state[self._key("share_id")]):
-                st.code(self._urlutil.get_current_url() + f"?share_id={st.session_state[self._key('share_id')]}")
+            if (not self._key("share_id") in st.session_state or not
+                self._share.is_owner(st.session_state[self._key("owner_id")],
+                                     st.session_state[self._key("share_id")])):
+                st.session_state[self._key("share_id")] = self._share.new_id()
+
+            if self._share.share(st.session_state[self._key("owner_id")],
+                                 st.session_state[self._key("share_id")]):
+                self._urlutil.set_url_params({"owner_id": st.session_state[self._key("owner_id")],
+                                              "share_id": st.session_state[self._key("share_id")]})
+                st.code((self._urlutil.get_current_url() +
+                         f"?share_id={st.session_state[self._key('share_id')]}"))
             else:
                 del st.session_state[self._key("share_id")]
                 st.warning("sharing failed, please report an issue!")

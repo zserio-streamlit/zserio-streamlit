@@ -9,13 +9,12 @@ class URLUtil(Widget):
 
     def get_current_url(self):
         headers = _get_websocket_headers()
-        self._log(headers)
         return headers["Host"]
 
     def get_url_params(self):
         params = st.experimental_get_query_params()
-        self._log(params)
         return params
 
     def set_url_params(self, params):
+        self._log(f"setting url params: {params}")
         st.experimental_set_query_params(**params)
