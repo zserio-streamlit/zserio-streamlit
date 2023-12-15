@@ -4,6 +4,7 @@ import streamlit as st
 import zserio
 
 from tempfile import TemporaryDirectory
+from importlib.metadata import version
 
 from interactive_zserio.widget import Widget
 from interactive_zserio.workspace import Workspace
@@ -77,7 +78,7 @@ class MainView(Widget):
         self._log("render")
 
         st.write(f"""
-            <h1>Interactive Zserio<sup style="top: -2em;">{zserio.VERSION_STRING}</sup> Compiler!</h1>
+            <h1>Interactive Zserio<sup style="top: -2em;">{version("zserio")}</sup> Compiler!</h1>
         """, unsafe_allow_html=True)
 
         schema_modes = { "write": "Write schema", "upload": "Upload schema or workspace", "sample": "Sample" }
