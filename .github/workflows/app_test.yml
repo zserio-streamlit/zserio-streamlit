@@ -1,0 +1,29 @@
+name: Interactive Zserio AppTest
+
+on:
+  push:
+    branches: ['master', 'testing']
+  pull_request:
+    branches: ['master']
+  workflow_dispatch:
+
+jobs:
+  app_test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: "Checkout"
+      uses: actions/checkout@v4
+
+    - name: "Set up Python"
+      uses: actions/setup-python@v5
+      with:
+        python-version: 3.11
+
+    - name: "Install python requirements"
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install -r requirements.txt
+
+    - name: "Run streamlit AppTest on interactive_zserio.py"
+      run: |
+        python interactive_zserio_test.py
