@@ -12,9 +12,9 @@ class URLUtil(Widget):
         return headers["Host"]
 
     def get_url_params(self):
-        params = st.experimental_get_query_params()
+        params = st.query_params
         return params
 
     def set_url_params(self, params):
         self._log(f"setting url params: {params}")
-        st.experimental_set_query_params(**params)
+        st.query_params.update(params)
