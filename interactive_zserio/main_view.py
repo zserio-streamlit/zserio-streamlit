@@ -57,10 +57,10 @@ class MainView(Widget):
 
             query_params = self._urlutil.get_url_params()
 
-            owner_id = query_params["owner_id"][0] if ("owner_id") in query_params else self._share.new_id()
+            owner_id = query_params["owner_id"] if ("owner_id") in query_params else self._share.new_id()
             st.session_state[self._key("owner_id")] = owner_id
 
-            share_id = query_params["share_id"][0] if ("share_id") in query_params else None
+            share_id = query_params["share_id"] if ("share_id") in query_params else None
             if not (share_id and self._restore_share(share_id)):
                 st.session_state[self._key("schema_mode")] = "sample"
                 self._share.restore_sample()
